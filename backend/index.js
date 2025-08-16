@@ -1,51 +1,44 @@
-// server.ts
 import express from "express";
-
 import cors from "cors";
 import admin from "firebase-admin";
 import fs from "fs";
 import path from "path";
 
 const app = express();
-app.use(express.json());
 app.use(cors());
+app.use(express.json());
 
-// Load service account directly from file
+// Load Firebase service account
 const serviceAccount = JSON.parse(
   fs.readFileSync(path.resolve("./serviceAccountKey.json"), "utf-8")
 );
 
-// Initialize Firebase Admin SDK
 admin.initializeApp({
   credential: admin.credential.cert(serviceAccount),
 });
 
-// Send push notification
+// Send notification to all registered tokens
 app.post("/send-notification", async (req, res) => {
   try {
-    const { token, title, body, image, data } = req.body;
-
-    if (!token) return res.status(400).json({ error: "FCM token is required" });
+    const { title, body, image, tokens } = req.body;
+    console.log(tokens);
 
     const message = {
-      notification: {
-        title: title || "Default Title",
-        body: body || "Default Body",
-        image: image || undefined, // make sure image is optional
-      },
-      data: data || {},
-      token,
+      notification: { title, body },
+      webpush: { notification: { image } },
     };
 
-    const response = await admin.messaging().send(message);
-    res.json({ success: true, response });
-  } catch (error) {
-    console.error("Error sending notification:", error);
-    res.status(500).json({ success: false, error: error.message });
+    const response = await admin.messaging().sendEachForMulticast({
+      tokens: tokens,
+      ...message,
+    });
+    return res.json({ success: true, response });
+  } catch (err) {
+    console.error(err);
+    return res.status(500).json({ success: false, error: err.message });
   }
 });
 
-const PORT = 3000;
-app.listen(PORT, () => {
-  console.log(`🚀 Server running on http://localhost:${PORT}`);
+app.listen(3000, () => {
+  console.log("🚀 Server running on http://localhost:3000");
 });
