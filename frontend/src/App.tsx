@@ -60,7 +60,9 @@ function App() {
 
       const data = await response.json();
 
-      if (response.ok) {
+      console.log(data.success);
+
+      if (data.success) {
         toast.success("Notification sent successfully!");
       } else {
         toast.error(`Error sending notification: ${data.error}`);

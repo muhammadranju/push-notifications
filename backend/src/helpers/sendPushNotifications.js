@@ -3,6 +3,7 @@ import fs from "fs";
 import path from "path";
 import { fileURLToPath } from "url";
 
+// Initialize Firebase Admin SDK
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
@@ -14,20 +15,29 @@ admin.initializeApp({
   credential: admin.credential.cert(serviceAccount),
 });
 
+// Function to send notifications to multiple tokens (users)
 export const sendPushNotifications = async (tokens, title, body, image) => {
-  const message = {
+  const messages = tokens.map((token) => ({
+    token,
     notification: { title, body },
     webpush: { notification: { image } },
-  };
-  console.log(tokens);
+  }));
 
-  const response = await admin.messaging().sendEach({
-    tokens,
-    ...message,
-  });
-  return response;
+  try {
+    const response = await admin.messaging().sendEach(messages);
+    // Log the detailed response
+    console.log("Notification send response:", response);
+    return response;
+  } catch (error) {
+    console.error("Error sending notifications:", error);
+    if (error instanceof admin.firestore.FirestoreError) {
+      console.error("Firestore specific error:", error);
+    }
+    throw error; // Let the error propagate
+  }
 };
 
+// Function to send a notification to a single token (user)
 export const sendSingleNotification = async (token, title, body, image) => {
   const message = {
     token,
@@ -35,6 +45,12 @@ export const sendSingleNotification = async (token, title, body, image) => {
     webpush: { notification: { image } },
   };
 
-  const response = await admin.messaging().send(message);
-  return response;
+  try {
+    // Send the notification
+    const response = await admin.messaging().send(message); // Single message to one token
+    return response;
+  } catch (error) {
+    console.error("Error sending single notification:", error);
+    throw error; // Let the error propagate for further handling
+  }
 };
