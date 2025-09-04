@@ -10,7 +10,7 @@ function App() {
   const [title, setTitle] = useState<string>("");
   const [body, setBody] = useState<string>("");
   const [imageUrl, setImageUrl] = useState<string>("");
-  const [tokensList, setTokensList] = useState<string[]>([]); // for multiple tokens
+  const [tokensList, setTokensList] = useState<string>(""); // for multiple tokens
 
   // Request notification permission and get FCM token
   const requestPermission = async () => {
@@ -35,7 +35,7 @@ function App() {
           console.warn("No token retrieved.");
         }
       } else {
-        toast("You denied notification permissions");
+        toast.error("You denied notification permissions");
       }
     } catch (err) {
       console.error("Error getting token:", err);
@@ -44,33 +44,30 @@ function App() {
 
   // Send notification to backend
   const sendNotification = async () => {
-    const allTokens = tokensList.length ? tokensList : token ? [token] : [];
-    if (allTokens.length === 0) {
-      toast("No tokens available");
-      return;
-    }
-
     try {
       const response = await fetch("http://localhost:3000/send-notification", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json", // Include this header
+        },
         body: JSON.stringify({
           title,
           body,
           image: imageUrl,
-          tokens: allTokens,
+          tokens: tokensList, // Ensure tokensList is an array of strings
         }),
       });
 
       const data = await response.json();
+
       if (response.ok) {
-        toast("Notification sent successfully!");
+        toast.success("Notification sent successfully!");
       } else {
-        toast(`Error sending notification: ${data.error}`);
+        toast.error(`Error sending notification: ${data.error}`);
       }
     } catch (err) {
       console.error("Send notification error:", err);
-      toast(`Failed to send notification`);
+      toast.error(`Failed to send notification. Error: ${err}`);
     }
   };
 
@@ -117,8 +114,8 @@ function App() {
         className="w-full p-2 border border-gray-300 rounded mb-2"
       />
       <textarea
-        value={tokensList.join("\n")}
-        onChange={(e) => setTokensList(e.target.value.split("\n"))}
+        value={tokensList}
+        onChange={(e) => setTokensList(e.target.value)}
         placeholder="Other browser tokens (one per line)"
         className="w-full p-2 border border-gray-300 rounded mb-4"
       />
