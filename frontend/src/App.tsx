@@ -4,13 +4,14 @@ import { useEffect, useState } from "react";
 import { messaging } from "./firebase";
 import toast from "react-hot-toast";
 import Cookies from "js-cookie";
+import SendNotification from "./components/SendNotification";
+import SendSingleNotification from "./components/SendSingleNotification";
+import { MdDevices, MdDevicesOther } from "react-icons/md";
 
 function App() {
   const [token, setToken] = useState<string | null>(null);
-  const [title, setTitle] = useState<string>("");
-  const [body, setBody] = useState<string>("");
-  const [imageUrl, setImageUrl] = useState<string>("");
-  const [tokensList, setTokensList] = useState<string>(""); // for multiple tokens
+
+  const [showNotification, setShowNotification] = useState<boolean>(false);
 
   // Request notification permission and get FCM token
   const requestPermission = async () => {
@@ -43,35 +44,68 @@ function App() {
   };
 
   // Send notification to backend
-  const sendNotification = async () => {
-    try {
-      const response = await fetch("http://localhost:3000/send-notification", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json", // Include this header
-        },
-        body: JSON.stringify({
-          title,
-          body,
-          image: imageUrl,
-          tokens: tokensList, // Ensure tokensList is an array of strings
-        }),
-      });
+  // const sendNotification = async () => {
+  //   try {
+  //     const response = await fetch("http://localhost:3000/send-notification", {
+  //       method: "POST",
+  //       headers: {
+  //         "Content-Type": "application/json", // Include this header
+  //       },
+  //       body: JSON.stringify({
+  //         title,
+  //         body,
+  //         image: imageUrl,
+  //         tokens: tokensList, // Ensure tokensList is an array of strings
+  //       }),
+  //     });
 
-      const data = await response.json();
+  //     const data = await response.json();
 
-      console.log(data.success);
+  //     console.log(data.success);
 
-      if (data.success) {
-        toast.success("Notification sent successfully!");
-      } else {
-        toast.error(`Error sending notification: ${data.error}`);
-      }
-    } catch (err) {
-      console.error("Send notification error:", err);
-      toast.error(`Failed to send notification. Error: ${err}`);
-    }
-  };
+  //     if (data.success) {
+  //       toast.success("Notification sent successfully!");
+  //     } else {
+  //       toast.error(`Error sending notification: ${data.error}`);
+  //     }
+  //   } catch (err) {
+  //     console.error("Send notification error:", err);
+  //     toast.error(`Failed to send notification. Error: ${err}`);
+  //   }
+  // };
+  // // Send notification to backend
+  // const sendSingleNotification = async () => {
+  //   try {
+  //     const response = await fetch(
+  //       "http://localhost:3000/send-single-notification",
+  //       {
+  //         method: "POST",
+  //         headers: {
+  //           "Content-Type": "application/json", // Include this header
+  //         },
+  //         body: JSON.stringify({
+  //           title,
+  //           body,
+  //           image: imageUrl,
+  //           tokens: tokensList, // Ensure tokensList is an array of strings
+  //         }),
+  //       }
+  //     );
+
+  //     const data = await response.json();
+
+  //     console.log(data.success);
+
+  //     if (data.success) {
+  //       toast.success("Notification sent successfully!");
+  //     } else {
+  //       toast.error(`Error sending notification: ${data.error}`);
+  //     }
+  //   } catch (err) {
+  //     console.error("Send notification error:", err);
+  //     toast.error(`Failed to send notification. Error: ${err}`);
+  //   }
+  // };
 
   useEffect(() => {
     requestPermission();
@@ -93,54 +127,28 @@ function App() {
   return (
     <div className="max-w-xl mx-auto p-6 mt-24">
       <h1 className="text-3xl font-bold mb-4">Firebase Push Notifications</h1>
-
-      <input
-        type="text"
-        value={title as string}
-        onChange={(e) => setTitle(e.target.value)}
-        placeholder="Title"
-        className="w-full p-2 border border-gray-300 rounded mb-2"
-      />
-      <textarea
-        value={body as string}
-        rows={6}
-        onChange={(e) => setBody(e.target.value)}
-        placeholder="Body"
-        className="w-full p-2 border border-gray-300 rounded mb-2"
-      />
-      <input
-        type="text"
-        value={imageUrl}
-        onChange={(e) => setImageUrl(e.target.value)}
-        placeholder="Image URL"
-        className="w-full p-2 border border-gray-300 rounded mb-2"
-      />
-      <textarea
-        value={tokensList}
-        onChange={(e) => setTokensList(e.target.value)}
-        placeholder="Other browser tokens (one per line)"
-        className="w-full p-2 border border-gray-300 rounded mb-4"
-      />
-
-      <div className="flex flex-row justify-between w-full">
+      <div className="flex flex-row justify-end w-full mb-5">
         <button
-          onClick={() => {
-            navigator.clipboard
-              .writeText(token as string)
-              .then(() => toast("Token copied to clipboard!"))
-              .catch((err) => console.error("Failed to copy: ", err));
-          }}
-          className="bg-blue-900 text-white cursor-pointer px-4 py-2 rounded-lg hover:bg-blue-700 transition"
+          className={`${
+            showNotification ? "bg-neutral-900" : "bg-neutral-900"
+          }  text-white cursor-pointer px-4 py-2 rounded-lg hover:bg-neutral-700 transition`}
+          onClick={() => setShowNotification(!showNotification)}
         >
-          Copy Token
-        </button>
-        <button
-          onClick={sendNotification}
-          className="bg-neutral-900 text-white cursor-pointer px-4 py-2 rounded-lg hover:bg-neutral-700 transition"
-        >
-          Send Notification
+          {showNotification ? (
+            <span className="flex gap-2 items-center">
+              Multiple <MdDevicesOther className="w-6 h-6" />
+            </span>
+          ) : (
+            <span className="flex gap-2 items-center">
+              Single <MdDevices className="w-6 h-6" />
+            </span>
+          )}
         </button>
       </div>
+
+      {!showNotification && <SendNotification />}
+
+      {showNotification && <SendSingleNotification token={token} />}
     </div>
   );
 }

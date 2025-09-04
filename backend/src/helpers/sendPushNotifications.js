@@ -8,7 +8,7 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 // Load Firebase service account (always relative to this file)
-const serviceAccountPath = path.join(__dirname, "..", "serviceAccountKey.json");
+const serviceAccountPath = path.join(__dirname, "serviceAccountKey.json");
 const serviceAccount = JSON.parse(fs.readFileSync(serviceAccountPath, "utf-8"));
 
 admin.initializeApp({
@@ -17,6 +17,7 @@ admin.initializeApp({
 
 // Function to send notifications to multiple tokens (users)
 export const sendPushNotifications = async (tokens, title, body, image) => {
+  // console.log(tokens);
   const messages = tokens.map((token) => ({
     token,
     notification: { title, body },
@@ -26,7 +27,7 @@ export const sendPushNotifications = async (tokens, title, body, image) => {
   try {
     const response = await admin.messaging().sendEach(messages);
     // Log the detailed response
-    console.log("Notification send response:", response);
+    // console.log("Notification send response:", response);
     return response;
   } catch (error) {
     console.error("Error sending notifications:", error);
