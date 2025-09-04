@@ -1,22 +1,9 @@
-import admin from "firebase-admin";
+import admin, { messaging } from "firebase-admin";
 import fs from "fs";
 import path from "path";
 import { fileURLToPath } from "url";
 
-// Type definitions for the notification functions
-interface NotificationMessage {
-  title: string;
-  body: string;
-  image?: string;
-}
-
-interface SendPushNotificationsResponse {
-  successCount: number;
-  failureCount: number;
-  responses: any[];
-}
-
-// Initialize Firebase admin
+// Initialize Firebase Admin SDK
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
@@ -29,42 +16,54 @@ admin.initializeApp({
   credential: admin.credential.cert(serviceAccount),
 });
 
-// Function to send notifications to multiple tokens
+// Type definitions for notifications
+interface NotificationMessage {
+  title: string;
+  body: string;
+  image?: string;
+}
+
+// Function to send notifications to multiple tokens (users)
 export const sendPushNotifications = async (
   tokens: string[],
   title: string,
   body: string,
   image?: string
-): Promise<SendPushNotificationsResponse> => {
-  const message: NotificationMessage = {
-    title,
-    body,
-    image,
-  };
+) => {
+  const messages = tokens.map((token) => ({
+    token,
+    notification: { title, body },
+    webpush: { notification: { image } },
+  }));
 
-  const response = await admin.messaging().sendEachForMulticast({
-    tokens,
-    ...message,
-  });
-  return response;
+  try {
+    const response = await admin.messaging().sendEach(messages); // Sending the notifications
+    console.log("Notification send response:", response);
+    return response;
+  } catch (error) {
+    console.error("Error sending notifications:", error);
+    throw error; // Let the error propagate
+  }
 };
 
-// Function to send a single notification to a token
+// Function to send a notification to a single token (user)
 export const sendSingleNotification = async (
   token: string,
   title: string,
   body: string,
   image?: string
-): Promise<any> => {
+) => {
   const message: NotificationMessage = {
     title,
     body,
     image,
   };
 
-  const response = await admin.messaging().send({
-    token,
-    ...message,
-  });
-  return response;
+  try {
+    const response = await admin.messaging().send({ token, ...message });
+    return response; // Send the notification
+  } catch (error) {
+    console.error("Error sending single notification:", error);
+    throw error; // Let the error propagate for further handling
+  }
 };
