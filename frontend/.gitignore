@@ -7,8 +7,6 @@ yarn-error.log*
 pnpm-debug.log*
 lerna-debug.log*
 
-firebase-messaging-sw.js*
-firebase.ts*
 
 node_modules
 dist

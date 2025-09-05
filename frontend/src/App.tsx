@@ -1,4 +1,4 @@
-/* eslint-disable @typescript-eslint/ban-ts-comment */
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { getToken, onMessage } from "firebase/messaging";
 import { useEffect, useState } from "react";
 import { messaging } from "./firebase";
@@ -10,8 +10,13 @@ import { MdDevices, MdDevicesOther } from "react-icons/md";
 
 function App() {
   const [token, setToken] = useState<string | null>(null);
-
   const [showNotification, setShowNotification] = useState<boolean>(false);
+  const [showModal, setShowModal] = useState<boolean>(false); // Modal state
+  const [notificationInfo, setNotificationInfo] = useState<{
+    title: string;
+    body: any;
+    image: any;
+  } | null>(null);
 
   // Request notification permission and get FCM token
   const requestPermission = async () => {
@@ -23,8 +28,7 @@ function App() {
         );
 
         const currentToken = await getToken(messaging, {
-          vapidKey:
-            "BI1vK68MGFOnPc3YxMTmOvOJ22bnbrXnWokhavlWWJxHO2Kt0VlC3gzv66Vxsl-b37fmjcFQmLLs-0lXuTEo2aw",
+          vapidKey: import.meta.env.VITE_FIREBASE_VAPID_KEY,
           serviceWorkerRegistration: registration,
         });
 
@@ -43,70 +47,6 @@ function App() {
     }
   };
 
-  // Send notification to backend
-  // const sendNotification = async () => {
-  //   try {
-  //     const response = await fetch("http://localhost:3000/send-notification", {
-  //       method: "POST",
-  //       headers: {
-  //         "Content-Type": "application/json", // Include this header
-  //       },
-  //       body: JSON.stringify({
-  //         title,
-  //         body,
-  //         image: imageUrl,
-  //         tokens: tokensList, // Ensure tokensList is an array of strings
-  //       }),
-  //     });
-
-  //     const data = await response.json();
-
-  //     console.log(data.success);
-
-  //     if (data.success) {
-  //       toast.success("Notification sent successfully!");
-  //     } else {
-  //       toast.error(`Error sending notification: ${data.error}`);
-  //     }
-  //   } catch (err) {
-  //     console.error("Send notification error:", err);
-  //     toast.error(`Failed to send notification. Error: ${err}`);
-  //   }
-  // };
-  // // Send notification to backend
-  // const sendSingleNotification = async () => {
-  //   try {
-  //     const response = await fetch(
-  //       "http://localhost:3000/send-single-notification",
-  //       {
-  //         method: "POST",
-  //         headers: {
-  //           "Content-Type": "application/json", // Include this header
-  //         },
-  //         body: JSON.stringify({
-  //           title,
-  //           body,
-  //           image: imageUrl,
-  //           tokens: tokensList, // Ensure tokensList is an array of strings
-  //         }),
-  //       }
-  //     );
-
-  //     const data = await response.json();
-
-  //     console.log(data.success);
-
-  //     if (data.success) {
-  //       toast.success("Notification sent successfully!");
-  //     } else {
-  //       toast.error(`Error sending notification: ${data.error}`);
-  //     }
-  //   } catch (err) {
-  //     console.error("Send notification error:", err);
-  //     toast.error(`Failed to send notification. Error: ${err}`);
-  //   }
-  // };
-
   useEffect(() => {
     requestPermission();
 
@@ -114,15 +54,35 @@ function App() {
     onMessage(messaging, (payload) => {
       console.log("Foreground message received:", payload);
       if (payload.notification?.title) {
-        new Notification(payload.notification.title, {
-          body: payload.notification.body,
+        const { title, body, image } = payload.notification;
+        // Show notification
+        new Notification(title, {
+          body: body,
           icon: "/logo192.png",
-          // @ts-ignore
-          image: payload.notification.image,
-        });
+          image: image, // Cast to `any` to avoid TypeScript error
+        } as any);
+
+        // Save the notification info to show in the modal when clicked
+        setNotificationInfo({ title, body, image });
+
+        // Add click event listener for notification
+        const notification = new Notification(title, {
+          body: body,
+          icon: "/logo192.png",
+          image: image,
+        } as any);
+        notification.onclick = () => {
+          // Show the modal when the notification is clicked
+          setShowModal(true);
+        };
       }
     });
   }, []);
+
+  const closeModal = () => {
+    setShowModal(false);
+    setNotificationInfo(null);
+  };
 
   return (
     <div className="max-w-xl mx-auto p-6 mt-24">
@@ -149,6 +109,33 @@ function App() {
       {!showNotification && <SendNotification />}
 
       {showNotification && <SendSingleNotification token={token} />}
+
+      {/* Modal Popup */}
+      {showModal && notificationInfo && (
+        <div className="fixed top-0 left-0 right-0 bottom-0  bg-opacity-50 flex items-center justify-center backdrop-blur-sm z-50">
+          <div className="bg-gray-100 p-6 rounded-lg max-w-lg w-full text-black shadow-xl transform transition-all duration-300 flex flex-col gap-4">
+            <button
+              className=" text-black text-xl cursor-pointer"
+              onClick={closeModal}
+            >
+              &times;
+            </button>
+            <div className="text-center">
+              {notificationInfo.image && (
+                <img
+                  src={notificationInfo.image}
+                  alt="Notification Image"
+                  className="mb-4 w-full max-h-64 object-cover rounded-lg"
+                />
+              )}
+              <h2 className="text-2xl font-semibold mb-2">
+                {notificationInfo.title}
+              </h2>
+              <p className="text-lg">{notificationInfo.body}</p>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
